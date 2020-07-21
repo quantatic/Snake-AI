@@ -10,6 +10,7 @@ use sdl2::rect::{Point,Rect};
 
 pub struct Network {
     weights: Vec<Matrix<f64>>,
+    biases: Vec<Matrix<f64>>,
     shape: Vec<usize>
 }
 
@@ -31,9 +32,17 @@ impl Network {
             })
             .collect::<Vec<Matrix<f64>>>();
 
+	let biases = shape[1..].iter()
+	    .map(|&layer_size: &usize| {
+		Matrix::new_map(1, layer_size, |_row: usize, _col: usize| {
+		    rng.sample(StandardNormal)
+		})
+	    })
+	    .collect::<Vec<Matrix<f64>>>();
 
         Self {
             weights,
+	    biases,
             shape
         }
     }
@@ -46,8 +55,13 @@ impl Network {
         );
 
         let result_matrix = self.weights.iter()
-            .fold(input, |total, val| {
-                &total * val
+	    .zip(self.biases.iter())
+            .fold(input, |total, (weight, bias)| {
+		let multiplied = &total * weight;
+		let biased = &multiplied + bias;
+		biased.map(|val: f64| {
+		    Network::sigmoid(val)
+		})
             });
 
         (0..result_matrix.get_width())
@@ -66,29 +80,93 @@ impl Network {
         let new_weights = self.weights.iter()
             .zip(other.weights.iter())
             .map(|(layer_one, layer_two)| {
-                //layer_one.print();
-                let res = Matrix::new_map(
+                Matrix::new_map(
                     layer_one.get_height(),
                     layer_one.get_width(),
                     |row, col| {
-                        let mut res = if rng.gen_bool(0.5) {
-                            layer_one[row][col]
-                        } else {
-                            layer_two[row][col]
-                        };
-                        
-                        res + rng.gen_range(-1.0, 1.0)
+			if rng.gen_bool(0.5) {
+			    layer_one[row][col]
+			} else {
+			    layer_two[row][col]
+			}
                     }
-                );
-
-                res
+                )
             })
             .collect();
 
+	let new_biases = self.biases.iter()
+	    .zip(other.weights.iter())
+	    .map(|(bias_one, bias_two)| {
+		Matrix::new_map(
+		    bias_one.get_height(),
+		    bias_one.get_width(),
+		    |row, col| {
+			if rng.gen_bool(0.5) {
+			    bias_one[row][col]
+			} else {
+			    bias_two[row][col]
+			}
+		    }
+		)
+	    })
+	    .collect();
+
         Self {
             weights: new_weights,
+	    biases: new_biases,
             shape: self.shape.clone()
         }
+    }
+
+    pub fn mutate(&self, mutation_prob: f64, mutation_amount: f64) -> Self {
+	let mut rng = thread_rng();
+	let new_weights = self.weights.iter()
+	    .map(|layer| {
+		Matrix::new_map(
+		    layer.get_height(),
+		    layer.get_width(),
+		    |row, col| {
+			let mut res = layer[row][col];
+			if rng.gen_bool(mutation_prob) {
+			    res += rng.gen_range(-mutation_amount, mutation_amount)
+			};
+
+			if rng.gen_bool(0.00001) {
+			    println!("{}", res);
+			}
+
+			res
+		    }
+		)
+	    })
+	    .collect();
+
+	let new_biases = self.biases.iter()
+	    .map(|bias| {
+		Matrix::new_map(
+		    bias.get_height(),
+		    bias.get_width(),
+		    |row, col| {
+			let mut res = bias[row][col];
+			if rng.gen_bool(mutation_prob) {
+			    res += rng.gen_range(-mutation_amount, mutation_amount);
+			}
+			
+			if rng.gen_bool(0.00001) {
+			    println!("{}", res);
+			}
+
+			res
+		    }
+		)
+	    })
+	    .collect();
+
+	Self {
+	    weights: new_weights,
+	    biases: new_biases,
+	    shape: self.shape.clone()
+	}
     }
 
     pub fn render(&self, canvas: &mut Canvas<Window>, scale: u16) {
@@ -126,5 +204,9 @@ impl Network {
                 )).unwrap();
             }
         }
+    }
+
+    fn sigmoid(val: f64) -> f64 {
+	1.0 / (1.0 + f64::exp(-val))
     }
 }

@@ -17,9 +17,9 @@ use crate::population::Population;
 
 const FPS: u16 = 10;
 
-const GAME_WIDTH: u16 = 25;
-const GAME_HEIGHT: u16 = 25;
-const GAME_SCALE: u16 = 50;
+const GAME_WIDTH: u16 = 50;
+const GAME_HEIGHT: u16 = 50;
+const GAME_SCALE: u16 = 16;
 const NETWORK_SCALE: u16 = 20;
 
 pub fn main() {
@@ -41,40 +41,29 @@ pub fn main() {
     
     let mut game = Game::new(GAME_WIDTH, GAME_HEIGHT, GAME_SCALE);
     let mut population = Population::new(
-        vec![
-            agent::Snake::new(),
-            agent::Snake::new(),
-            agent::Snake::new(),
-            agent::Snake::new(),
-            agent::Snake::new(),
-            agent::Snake::new(),
-            agent::Snake::new(),
-            agent::Snake::new(),
-            agent::Snake::new(),
-            agent::Snake::new(),
-            agent::Snake::new(),
-            agent::Snake::new(),
-            agent::Snake::new(),
-            agent::Snake::new(),
-            agent::Snake::new(),
-            agent::Snake::new(),
-            agent::Snake::new(),
-            agent::Snake::new(),
-            agent::Snake::new(),
-            agent::Snake::new(),
-            agent::Snake::new(),
-            agent::Snake::new(),
-            agent::Snake::new(),
-            agent::Snake::new(),
-            agent::Snake::new(),
-            agent::Snake::new(),
-            agent::Snake::new()
-        ]
+	(0..100_000)
+	    .map(|_| {
+		agent::Snake::new()
+	    })
+	    .collect()
     );
 
+    let mut generation = 1;
     loop {
-        println!("{:?}", population.evaluate());
         population = population.breed();
+	let (best, best_score) = population.get_best();
+	println!("Best score of generation {}: {}", generation, best_score);
+	best.render(&mut canvas);
+        for event in event_pump.poll_iter() {
+            match event {
+                Event::Quit { .. } => {
+                    return
+                }
+		_ => {}
+	    };
+	}
+
+	generation += 1;
     }
 
     return;

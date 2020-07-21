@@ -50,6 +50,20 @@ impl<T> Matrix<T> {
             values: result_values
         }
     }
+
+	pub fn map<F>(mut self, func: F) -> Self where
+		F: Fn(T) -> T,
+	{
+
+		self.values = self.values.into_iter()
+			.map(|val: T| {
+				func(val)
+			})
+			.collect();
+
+		self
+	}
+
     
     pub fn get_width(&self) -> usize {
         self.width

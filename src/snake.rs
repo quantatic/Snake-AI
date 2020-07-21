@@ -23,8 +23,14 @@ pub enum GameStatus {
 
 #[derive(Clone, Copy, Debug)]
 pub struct GameStats {
-    pub distance_to_food: f64,
-    pub distance_to_wall: f64,
+    pub distance_to_wall_up: f64,
+    pub distance_to_wall_right: f64,
+    pub distance_to_wall_down: f64,
+    pub distance_to_wall_left: f64,
+    pub distance_to_food_x: f64,
+    pub distance_to_food_y: f64,
+    pub distance_to_tail_x: f64,
+    pub distance_to_tail_y: f64,
     pub score: u32
 }
 
@@ -66,8 +72,8 @@ impl Game {
         
         snake.push(
             Location{
-                x: 4,
-                y: 4
+                x: 0,
+                y: 0
             }
         );
 
@@ -77,7 +83,7 @@ impl Game {
             tile_size,
             snake,
             snake_direction: Direction::Right,
-            food_loc: Location::random_location(width, height),
+	    food_loc: Location { x: 10, y: 15 },
             game_in_progress: true
         }
     }
@@ -166,6 +172,8 @@ impl Game {
                 snake_loc == new_front
             });
 
+	let collision_with_self = false;
+
         if out_of_bounds || collision_with_self {
             self.snake.push(old_front);
             self.game_in_progress = false;
@@ -177,38 +185,46 @@ impl Game {
         if new_front == self.food_loc {
             let mut food_overlap = true;
             while food_overlap {
-                self.food_loc = Location::random_location(self.width, self.height);
+		self.food_loc.x += 13;
+		self.food_loc.x %= (self.width as i16);
+		self.food_loc.y += 19;
+		self.food_loc.y %= (self.height as i16);
+		food_overlap = false;
+		/*self.food_loc = Location::random_location(self.width, self.height);
                 food_overlap = self
                     .snake
                     .iter()
                     .any(|&snake_loc| {
-                        snake_loc == self.food_loc
-                    });
+			snake_loc == self.food_loc
+		    });*/
             }
 
             self.snake.insert(0, self.snake[0]);
         }
 
-        let distance_to_food = f64::sqrt(
-            f64::powi((new_front.x - self.food_loc.x).into(), 2)
-                + f64::powi((new_front.y - self.food_loc.y).into(), 2)
-        );
+	let distance_to_food_x = new_front.x - self.food_loc.x;
+	let distance_to_food_y = new_front.y - self.food_loc.y;
 
-        let distance_to_wall: f64 = vec![
-            new_front.x,
-            i16::try_from(self.width).unwrap() - new_front.x,
-            new_front.y,
-            i16::try_from(self.height).unwrap() - new_front.y
-        ]
-            .into_iter()
-            .min()
-            .unwrap()
-            .into();
+	let distance_to_wall_up = new_front.y;
+	let distance_to_wall_right = i16::try_from(self.width).unwrap() - new_front.x;
+	let distance_to_wall_down = i16::try_from(self.height).unwrap() - new_front.y;
+	let distance_to_wall_left = new_front.x;
+	
+	let tail = self.snake.last().unwrap();
+
+	let distance_to_tail_x = new_front.x - tail.x;
+	let distance_to_tail_y = new_front.y - tail.y;
 
         GameStatus::InProgress(
             GameStats {
-                distance_to_food,
-                distance_to_wall,
+		distance_to_food_x: distance_to_food_x.into(),
+		distance_to_food_y: distance_to_food_y.into(),
+		distance_to_wall_up: distance_to_wall_up.into(),
+		distance_to_wall_right: distance_to_wall_right.into(),
+		distance_to_wall_down: distance_to_wall_down.into(),
+		distance_to_wall_left: distance_to_wall_left.into(),
+		distance_to_tail_x: distance_to_tail_x.into(),
+		distance_to_tail_y: distance_to_tail_y.into(),
                 score: self.snake.len() as u32
             }
         )
@@ -216,5 +232,13 @@ impl Game {
 
     pub fn turn_snake(&mut self, direction: Direction) {
         self.snake_direction = direction;
+    }
+
+    pub fn get_width(&self) -> u16 {
+	self.width
+    }
+
+    pub fn get_height(&self) -> u16 {
+	self.height
     }
 }
