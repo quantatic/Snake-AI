@@ -23,14 +23,12 @@ pub enum GameStatus {
 
 #[derive(Clone, Copy, Debug)]
 pub struct GameStats {
-    pub distance_to_wall_up: f64,
-    pub distance_to_wall_right: f64,
-    pub distance_to_wall_down: f64,
-    pub distance_to_wall_left: f64,
+    pub distance_to_obstacle_up: f64,
+    pub distance_to_obstacle_right: f64,
+    pub distance_to_obstacle_down: f64,
+    pub distance_to_obstacle_left: f64,
     pub distance_to_food_x: f64,
     pub distance_to_food_y: f64,
-    pub distance_to_tail_x: f64,
-    pub distance_to_tail_y: f64,
     pub score: u32
 }
 
@@ -77,6 +75,20 @@ impl Game {
             }
         );
 
+        snake.push(
+            Location{
+                x: 1,
+                y: 0
+            }
+        );
+	
+        snake.push(
+            Location{
+                x: 2,
+                y: 0
+            }
+        );
+	
         Self {
             width,
             height,
@@ -172,8 +184,6 @@ impl Game {
                 snake_loc == new_front
             });
 
-	let collision_with_self = false;
-
         if out_of_bounds || collision_with_self {
             self.snake.push(old_front);
             self.game_in_progress = false;
@@ -185,18 +195,18 @@ impl Game {
         if new_front == self.food_loc {
             let mut food_overlap = true;
             while food_overlap {
-		self.food_loc.x += 13;
+		/*self.food_loc.x += 13;
 		self.food_loc.x %= (self.width as i16);
 		self.food_loc.y += 19;
 		self.food_loc.y %= (self.height as i16);
-		food_overlap = false;
-		/*self.food_loc = Location::random_location(self.width, self.height);
+		food_overlap = false;*/
+		self.food_loc = Location::random_location(self.width, self.height);
                 food_overlap = self
                     .snake
                     .iter()
                     .any(|&snake_loc| {
 			snake_loc == self.food_loc
-		    });*/
+		    });
             }
 
             self.snake.insert(0, self.snake[0]);
@@ -205,26 +215,44 @@ impl Game {
 	let distance_to_food_x = new_front.x - self.food_loc.x;
 	let distance_to_food_y = new_front.y - self.food_loc.y;
 
-	let distance_to_wall_up = new_front.y;
-	let distance_to_wall_right = i16::try_from(self.width).unwrap() - new_front.x;
-	let distance_to_wall_down = i16::try_from(self.height).unwrap() - new_front.y;
-	let distance_to_wall_left = new_front.x;
-	
-	let tail = self.snake.last().unwrap();
+	let mut distance_to_obstacle_up = new_front.y;
+	let mut distance_to_obstacle_right = i16::try_from(self.width).unwrap() - new_front.x;
+	let mut distance_to_obstacle_down = i16::try_from(self.height).unwrap() - new_front.y;
+	let mut distance_to_obstacle_left = new_front.x;
 
-	let distance_to_tail_x = new_front.x - tail.x;
-	let distance_to_tail_y = new_front.y - tail.y;
+	for snake_location in self.snake.iter().rev().skip(1).rev() {
+	    let snake_bit_difference_x = new_front.x - snake_location.x; // positive if head to right, negative if left
+	    let snake_bit_difference_y = snake_location.y - new_front.y; // positive if head above, negative if below
+
+	    if snake_bit_difference_x == 0 {
+		if snake_bit_difference_y >= 0 {
+		    distance_to_obstacle_down = i16::min(distance_to_obstacle_down, snake_bit_difference_y);
+		}
+
+		if snake_bit_difference_y <= 0 {
+		    distance_to_obstacle_up = i16::min(distance_to_obstacle_up, -snake_bit_difference_y);
+		}
+	    }
+
+	    if snake_bit_difference_y == 0 {
+		if snake_bit_difference_x >= 0 {
+		    distance_to_obstacle_left = i16::min(distance_to_obstacle_left, snake_bit_difference_x);
+		}
+
+		if snake_bit_difference_x <= 0 {
+		    distance_to_obstacle_right = i16::min(distance_to_obstacle_right, -snake_bit_difference_x);
+		}
+	    }
+	}
 
         GameStatus::InProgress(
             GameStats {
 		distance_to_food_x: distance_to_food_x.into(),
 		distance_to_food_y: distance_to_food_y.into(),
-		distance_to_wall_up: distance_to_wall_up.into(),
-		distance_to_wall_right: distance_to_wall_right.into(),
-		distance_to_wall_down: distance_to_wall_down.into(),
-		distance_to_wall_left: distance_to_wall_left.into(),
-		distance_to_tail_x: distance_to_tail_x.into(),
-		distance_to_tail_y: distance_to_tail_y.into(),
+		distance_to_obstacle_up: distance_to_obstacle_up.into(),
+		distance_to_obstacle_right: distance_to_obstacle_right.into(),
+		distance_to_obstacle_down: distance_to_obstacle_down.into(),
+		distance_to_obstacle_left: distance_to_obstacle_left.into(),
                 score: self.snake.len() as u32
             }
         )

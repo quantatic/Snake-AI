@@ -131,10 +131,6 @@ impl Network {
 			    res += rng.gen_range(-mutation_amount, mutation_amount)
 			};
 
-			if rng.gen_bool(0.00001) {
-			    println!("{}", res);
-			}
-
 			res
 		    }
 		)
@@ -150,10 +146,6 @@ impl Network {
 			let mut res = bias[row][col];
 			if rng.gen_bool(mutation_prob) {
 			    res += rng.gen_range(-mutation_amount, mutation_amount);
-			}
-			
-			if rng.gen_bool(0.00001) {
-			    println!("{}", res);
 			}
 
 			res
@@ -206,7 +198,7 @@ impl Network {
         }
     }
 
-    fn sigmoid(val: f64) -> f64 {
+    pub fn sigmoid(val: f64) -> f64 {
 	1.0 / (1.0 + f64::exp(-val))
     }
 }

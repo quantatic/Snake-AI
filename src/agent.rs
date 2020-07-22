@@ -90,12 +90,12 @@ pub struct Snake {
 }
 
 impl Snake {
-    const SNAKE_STEPS: usize = 500;
-    const NETWORK_INNER_LAYERS: [usize; 2] = [25, 25];
+    const SNAKE_STEPS: usize = 10000;
+    const NETWORK_INNER_LAYERS: [usize; 1] = [20];
 
-    pub fn new() -> Self{
+    pub fn new() -> Self {
         let mut network_size = Snake::NETWORK_INNER_LAYERS.to_vec();
-        network_size.insert(0, 8); // 8 input values
+        network_size.insert(0, 6); // 6 input values
         network_size.push(4);      // 4 output values
         
         Self {
@@ -107,13 +107,16 @@ impl Snake {
         let network_inputs = vec![
 	    stats.distance_to_food_x,
 	    stats.distance_to_food_y,
-	    stats.distance_to_wall_up,
-	    stats.distance_to_wall_right,
-	    stats.distance_to_wall_down,
-	    stats.distance_to_wall_left,
-	    stats.distance_to_tail_x,
-	    stats.distance_to_tail_y
-        ];
+	    stats.distance_to_obstacle_up,
+	    stats.distance_to_obstacle_right,
+	    stats.distance_to_obstacle_down,
+	    stats.distance_to_obstacle_left,
+        ]
+	    .into_iter()
+	    .map(|val: f64| {
+		Network::sigmoid(val)
+	    })
+	    .collect();
 
         let network_result = self.rules.evaluate(network_inputs);
         let (selected_choice, selected_value) = network_result.iter().copied()
@@ -124,8 +127,8 @@ impl Snake {
             .unwrap();
 
         match selected_choice {
-            0 => snake::Direction::Right,
-            1 => snake::Direction::Up,
+            0 => snake::Direction::Up,
+            1 => snake::Direction::Right,
             2 => snake::Direction::Down,
             3 => snake::Direction::Left,
             other => panic!("Unhandled network output: {}", other)
@@ -140,7 +143,7 @@ impl Snake {
                 let button_press = self.get_next_press(stats);
                 game.turn_snake(button_press);
 		canvas.present();
-		std::thread::sleep(Duration::new(0, 1_000_000_000u32 / (100 as u32)));
+		std::thread::sleep(Duration::new(0, 1_000_000_000u32 / (500 as u32)));
             } else {
 		break;
             }
@@ -154,17 +157,14 @@ impl Agent for Snake {
         let mut game = snake::Game::new(50, 50, 0);
 	let mut score = 0;
 	let mut maybe_last_stats: Option<snake::GameStats> = None;
-	let mut steps_taken = 0;
         for step in 0..Snake::SNAKE_STEPS {
             if let snake::GameStatus::InProgress(stats) = game.step() {
 		score = u32::max(score, stats.score);
                 let button_press = self.get_next_press(stats);
                 game.turn_snake(button_press);
 		maybe_last_stats = Some(stats);
-		steps_taken = step;
             } else {
 		break;
-		steps_taken = step;
             }
         }
 
@@ -172,7 +172,7 @@ impl Agent for Snake {
 	let distance_to_food = f64::sqrt((last_stats.distance_to_food_x * last_stats.distance_to_food_x) + (last_stats.distance_to_food_y * last_stats.distance_to_food_y));
 	let max_distance_to_food = f64::sqrt(((game.get_width() * game.get_width()) + (game.get_height() * game.get_height())) as f64);
 	
-	f64::powi((score as f64) - (distance_to_food / max_distance_to_food) - ((steps_taken / Snake::SNAKE_STEPS) as f64), 5)
+	(score as f64) - (distance_to_food / max_distance_to_food)
     }
 
     fn crossover(&self, other: &Self) -> Self {
@@ -183,7 +183,7 @@ impl Agent for Snake {
 
     fn mutate(&self) -> Self {
 	Self {
-	    rules: self.rules.mutate(0.1, 2.0)
+	    rules: self.rules.mutate(0.05, 1.0)
 	}
     }
 }

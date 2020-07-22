@@ -45,27 +45,31 @@ impl<T> Population<T> where
 	let mut rng = thread_rng();
 
 	let mut new_agents: Vec<T> = Vec::new();
-	let agent_scores: Vec<(&T, f64)> = self.agents.iter()
+	let mut agent_scores: Vec<(&T, f64)> = self.agents.iter()
 	    .zip(self.evaluate())
 	    .collect();
 
-	for _ in self.agents.iter() {
-	    let &(agent1, _) = agent_scores
-		.choose_weighted(&mut rng, |&(_, score): &(&T, f64)| {
-		    score
-		}).unwrap();
+	agent_scores.sort_unstable_by(|&(_, val1): &(&T, f64), &(_, val2): &(&T, f64)| {
+	    val1.partial_cmp(&val2).unwrap()
+	});
+
+	let num_top_agents = 20;
+	let num_bottom_agents = 3;
+	let agents_to_breed_with = agent_scores.iter().take(num_bottom_agents)
+	    .chain(agent_scores.iter().skip(num_top_agents).rev().take(num_top_agents))
+	    .map(|&(agent_ref, val): &(&T, f64)| {
+		agent_ref
+	    })
+	    .collect::<Vec<_>>();
+
+	for _ in 0..self.agents.len() {
+	    let agent1 = *agents_to_breed_with.choose(&mut rng).unwrap();
 	    let mut agent2 = agent1;
 	    while (agent1 as *const T) == (agent2 as *const T) {
-		let &(chosen_agent, _) = agent_scores
-		    .choose_weighted(&mut rng, |&(_, score): &(&T, f64)| {
-			score
-		    }).unwrap();
-
-		agent2 = chosen_agent;
+		agent2 = agents_to_breed_with.choose(&mut rng).unwrap();
 	    }
 
-	    //new_agents.push(agent1.crossover(&agent2).mutate());
-	    new_agents.push(agent1.mutate());
+	    new_agents.push(agent1.crossover(&agent2).mutate());
 	}
 
 	Self {
