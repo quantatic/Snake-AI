@@ -41,7 +41,7 @@ pub fn main() {
     
     let mut game = Game::new(GAME_WIDTH, GAME_HEIGHT, GAME_SCALE);
     let mut population = Population::new(
-	(0..2500)
+	(0..1000)
 	    .map(|_| {
 		agent::Snake::new()
 	    })

@@ -8,6 +8,7 @@ use sdl2::render::Canvas;
 use sdl2::pixels::Color;
 use sdl2::rect::{Point,Rect};
 
+#[derive(Clone)]
 pub struct Network {
     weights: Vec<Matrix<f64>>,
     biases: Vec<Matrix<f64>>,

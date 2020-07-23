@@ -9,12 +9,13 @@ use crate::snake;
 
 use std::time::Duration;
 
-pub trait Agent {
+pub trait Agent: Clone {
     fn fitness(&self) -> f64;
     fn crossover(&self, other: &Self) -> Self;
     fn mutate(&self) -> Self;
 }
 
+#[derive(Clone)]
 pub struct Binary {
     vals: Vec<bool>,
     mutation_prob: f64
@@ -85,13 +86,14 @@ impl Agent for Binary {
     }
 }
 
+#[derive(Clone)]
 pub struct Snake {
     rules: Network
 }
 
 impl Snake {
     const SNAKE_STEPS: usize = 10000;
-    const NETWORK_INNER_LAYERS: [usize; 1] = [20];
+    const NETWORK_INNER_LAYERS: [usize; 3] = [10, 10, 10];
 
     pub fn new() -> Self {
         let mut network_size = Snake::NETWORK_INNER_LAYERS.to_vec();
@@ -154,25 +156,31 @@ impl Snake {
 
 impl Agent for Snake {
     fn fitness(&self) -> f64 {
-        let mut game = snake::Game::new(50, 50, 0);
-	let mut score = 0;
-	let mut maybe_last_stats: Option<snake::GameStats> = None;
-        for step in 0..Snake::SNAKE_STEPS {
-            if let snake::GameStatus::InProgress(stats) = game.step() {
-		score = u32::max(score, stats.score);
-                let button_press = self.get_next_press(stats);
-                game.turn_snake(button_press);
-		maybe_last_stats = Some(stats);
-            } else {
-		break;
+        let mut total_score = 0.0;
+        let runs_to_evaluate = 5;
+        for _ in 0..runs_to_evaluate {
+            let mut game = snake::Game::new(50, 50, 0);
+	    let mut score = 0;
+	    let mut maybe_last_stats: Option<snake::GameStats> = None;
+            for step in 0..Snake::SNAKE_STEPS {
+                if let snake::GameStatus::InProgress(stats) = game.step() {
+		    score = u32::max(score, stats.score);
+                    let button_press = self.get_next_press(stats);
+                    game.turn_snake(button_press);
+		    maybe_last_stats = Some(stats);
+                } else {
+		    break;
+                }
             }
+
+	    let last_stats = maybe_last_stats.unwrap();
+	    let distance_to_food = f64::sqrt((last_stats.distance_to_food_x * last_stats.distance_to_food_x) + (last_stats.distance_to_food_y * last_stats.distance_to_food_y));
+	    let max_distance_to_food = f64::sqrt(((game.get_width() * game.get_width()) + (game.get_height() * game.get_height())) as f64);
+	    
+	    total_score += (score as f64) - (distance_to_food / max_distance_to_food);
         }
 
-	let last_stats = maybe_last_stats.unwrap();
-	let distance_to_food = f64::sqrt((last_stats.distance_to_food_x * last_stats.distance_to_food_x) + (last_stats.distance_to_food_y * last_stats.distance_to_food_y));
-	let max_distance_to_food = f64::sqrt(((game.get_width() * game.get_width()) + (game.get_height() * game.get_height())) as f64);
-	
-	(score as f64) - (distance_to_food / max_distance_to_food)
+        total_score / (f64::from(runs_to_evaluate))
     }
 
     fn crossover(&self, other: &Self) -> Self {

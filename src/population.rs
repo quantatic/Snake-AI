@@ -53,23 +53,25 @@ impl<T> Population<T> where
 	    val1.partial_cmp(&val2).unwrap()
 	});
 
-	let num_top_agents = 20;
-	let num_bottom_agents = 3;
-	let agents_to_breed_with = agent_scores.iter().take(num_bottom_agents)
-	    .chain(agent_scores.iter().skip(num_top_agents).rev().take(num_top_agents))
+        let percentage_top_agents = 0.1;
+        let num_top_agents = (percentage_top_agents * (agent_scores.len() as f64)) as usize;
+	let agents_to_breed_with = agent_scores.iter().rev().take(num_top_agents)
 	    .map(|&(agent_ref, val): &(&T, f64)| {
 		agent_ref
 	    })
 	    .collect::<Vec<_>>();
 
-	for _ in 0..self.agents.len() {
+        new_agents.push(agents_to_breed_with[0].clone());
+	while new_agents.len() < self.agents.len() {
 	    let agent1 = *agents_to_breed_with.choose(&mut rng).unwrap();
-	    let mut agent2 = agent1;
+/*
+            let mut agent2 = agent1;
 	    while (agent1 as *const T) == (agent2 as *const T) {
 		agent2 = agents_to_breed_with.choose(&mut rng).unwrap();
-	    }
+	}
+*/
 
-	    new_agents.push(agent1.crossover(&agent2).mutate());
+            new_agents.push(agent1.mutate());
 	}
 
 	Self {
