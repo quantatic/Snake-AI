@@ -92,8 +92,8 @@ pub struct Snake {
 }
 
 impl Snake {
-    const SNAKE_STEPS: usize = 10000;
-    const NETWORK_INNER_LAYERS: [usize; 3] = [10, 10, 10];
+    const SNAKE_STEPS: usize = 50000;
+    const NETWORK_INNER_LAYERS: [usize; 3] = [8, 8, 8];
 
     pub fn new() -> Self {
         let mut network_size = Snake::NETWORK_INNER_LAYERS.to_vec();
@@ -191,7 +191,7 @@ impl Agent for Snake {
 
     fn mutate(&self) -> Self {
 	Self {
-	    rules: self.rules.mutate(0.05, 1.0)
+	    rules: self.rules.mutate(0.1, 3.0)
 	}
     }
 }

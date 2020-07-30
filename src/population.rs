@@ -3,6 +3,8 @@ use crate::agent::Agent;
 use rand::thread_rng;
 use rand::seq::SliceRandom;
 
+use rayon::prelude::*;
+
 #[derive(Debug)]
 pub struct Population<T> where
     T: Agent
@@ -11,7 +13,7 @@ pub struct Population<T> where
 }
 
 impl<T> Population<T> where
-    T: Agent
+    T: Agent + Sync
 {
     pub fn new(agents: Vec<T>) -> Self {
 	Population {
@@ -19,17 +21,12 @@ impl<T> Population<T> where
 	}
     }
 
-    pub fn evaluate(&self) -> Vec<f64> {
-        self.agents
-	    .iter()
-	    .map(Agent::fitness)
-	    .collect()
-    }
-
     pub fn get_best(&self) -> (&T, f64) {
-	let (score, best) = self.evaluate().into_iter()
-	    .zip(self.agents.iter())
-	    .max_by(|&(score1, _): &(f64, &T), &(score2, _): &(f64, &T)| {
+	let (best, score) = self.agents.par_iter()
+	    .map(|agent_ref: &T| {
+		(agent_ref, agent_ref.fitness())
+	    })
+	    .max_by(|&(_, score1): &(&T, f64), &(_, score2): &(&T, f64)| {
 		score1.partial_cmp(&score2).unwrap()
 	    })
 	    .unwrap();
@@ -45,17 +42,21 @@ impl<T> Population<T> where
 	let mut rng = thread_rng();
 
 	let mut new_agents: Vec<T> = Vec::new();
-	let mut agent_scores: Vec<(&T, f64)> = self.agents.iter()
-	    .zip(self.evaluate())
+	let mut agent_scores: Vec<(&T, f64)> = self.agents.par_iter()
+	    .map(|agent_ref: &T| {
+		(agent_ref, agent_ref.fitness())
+	    })
 	    .collect();
 
-	agent_scores.sort_unstable_by(|&(_, val1): &(&T, f64), &(_, val2): &(&T, f64)| {
+	agent_scores.par_sort_unstable_by(|&(_, val1): &(&T, f64), &(_, val2): &(&T, f64)| {
 	    val1.partial_cmp(&val2).unwrap()
 	});
 
         let percentage_top_agents = 0.1;
         let num_top_agents = (percentage_top_agents * (agent_scores.len() as f64)) as usize;
-	let agents_to_breed_with = agent_scores.iter().rev().take(num_top_agents)
+	let agents_to_breed_with = agent_scores.iter()
+	    .rev()
+	    .take(num_top_agents)
 	    .map(|&(agent_ref, val): &(&T, f64)| {
 		agent_ref
 	    })
