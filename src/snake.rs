@@ -43,8 +43,8 @@ impl Location {
         let mut rng = rand::thread_rng();
 
         Self {
-            x: rng.gen_range(0, width).try_into().unwrap(),
-            y: rng.gen_range(0, height).try_into().unwrap(),
+            x: rng.gen_range(0..width).try_into().unwrap(),
+            y: rng.gen_range(0..height).try_into().unwrap(),
         }
     }
 }

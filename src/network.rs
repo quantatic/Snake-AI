@@ -119,7 +119,7 @@ impl Network {
                 Matrix::new_map(layer.get_height(), layer.get_width(), |row, col| {
                     let mut res = layer[row][col];
                     if rng.gen_bool(mutation_prob) {
-                        res += rng.gen_range(-mutation_amount, mutation_amount)
+                        res += rng.gen_range(-mutation_amount..mutation_amount)
                     };
 
                     res
@@ -134,7 +134,7 @@ impl Network {
                 Matrix::new_map(bias.get_height(), bias.get_width(), |row, col| {
                     let mut res = bias[row][col];
                     if rng.gen_bool(mutation_prob) {
-                        res += rng.gen_range(-mutation_amount, mutation_amount);
+                        res += rng.gen_range(-mutation_amount..mutation_amount);
                     }
 
                     res
